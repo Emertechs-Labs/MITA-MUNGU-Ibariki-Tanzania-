@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && npm ci",
+  "framework": "create-react-app",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://mita-backend.vercel.app/api/$1"
+    },
+    {
+      "src": "/health",
+      "dest": "https://mita-backend.vercel.app/health"
+    },
+    {
+      "src": "/ready",
+      "dest": "https://mita-backend.vercel.app/ready"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://mita-backend.vercel.app",
+    "REACT_APP_HEDERA_NETWORK": "testnet",
+    "REACT_APP_ENVIRONMENT": "production"
+  }
+}

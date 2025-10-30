@@ -1,0 +1,14 @@
+# Ignore root-level build files and backend code
+src/
+node_modules/
+package-lock.json
+webpack.config.js
+scripts/
+logs/
+docs/
+k8s/
+IaC/
+Legal URT/
+
+# Only build the frontend
+!frontend/

@@ -9,22 +9,151 @@ The Tanzania Transparent Platform employs Infrastructure as Code (IaC) using Ter
 ### Vercel Deployment (Frontend - Recommended for Prototyping/Demos)
 For rapid prototyping and live demos, deploy the frontend to Vercel:
 
-1. **Prerequisites**:
-   - GitHub repository connected to Vercel account.
-   - `frontend/vercel.json` configured for API routing.
+#### Prerequisites
+- GitHub repository connected to Vercel account
+- Root-level `vercel.json` configured for monorepo structure
+- Environment variables configured in Vercel dashboard
 
-2. **Steps**:
-   - Import repo on [vercel.com](https://vercel.com).
-   - Select `preview` branch, root directory `frontend/`.
-   - Add env vars: `REACT_APP_API_URL=https://your-backend-url.com`.
-   - Deploy – live in 2-3 minutes.
+#### Configuration Files
 
-3. **Backend Deployment**:
-   - Deploy `src/server/` separately to Heroku/Railway.
-   - Update `vercel.json` with actual backend URL.
+**Root `vercel.json`**:
+```json
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && npm ci",
+  "framework": "create-react-app",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://mita-backend.vercel.app/api/$1"
+    },
+    {
+      "src": "/health",
+      "dest": "https://mita-backend.vercel.app/health"
+    },
+    {
+      "src": "/ready",
+      "dest": "https://mita-backend.vercel.app/ready"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://mita-backend.vercel.app",
+    "REACT_APP_HEDERA_NETWORK": "testnet",
+    "REACT_APP_ENVIRONMENT": "production"
+  }
+}
+```
 
-4. **Pros**: Free, fast, auto-scaling for React apps.
-5. **Cons**: Not for full-stack; backend separate.
+**Root `.vercelignore`**:
+```gitignore
+# Ignore root-level build files and backend code
+src/
+node_modules/
+package-lock.json
+webpack.config.js
+scripts/
+logs/
+docs/
+k8s/
+IaC/
+Legal URT/
+
+# Only build the frontend
+!frontend/
+```
+
+#### Deployment Steps
+1. **Connect Repository**:
+   - Import repo on [vercel.com](https://vercel.com)
+   - Select `production` branch
+   - Root directory remains `/` (important for monorepo)
+
+2. **Environment Variables** (in Vercel dashboard):
+   ```
+   REACT_APP_API_URL=https://mita-backend.vercel.app
+   REACT_APP_HEDERA_NETWORK=testnet
+   REACT_APP_ENVIRONMENT=production
+   ```
+
+3. **Deploy**: Automatic deployment on push to production branch
+
+#### Backend Deployment
+- Deploy backend (`src/server/`) separately to Vercel or Heroku
+- Update `vercel.json` routes with actual backend URL
+- Ensure CORS is configured for frontend domain
+
+#### CI/CD with GitHub Actions
+
+**Deployment Workflow** (`.github/workflows/deploy.yml`):
+```yaml
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [ production ]
+  workflow_dispatch:
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+      - name: Build frontend
+        run: cd frontend && npm run build
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+```
+
+**Required GitHub Secrets**:
+- `VERCEL_TOKEN`: Vercel API token
+- `VERCEL_ORG_ID`: Vercel organization ID
+- `VERCEL_PROJECT_ID`: Vercel project ID
+
+#### Testing Deployment Locally
+```bash
+# Test frontend build
+cd frontend && npm run build
+
+# Serve locally to test
+npx serve -s build
+```
+
+#### Troubleshooting
+- **Build fails**: Check that `frontend/package.json` has correct build script
+- **API calls fail**: Verify backend URL in `vercel.json` routes
+- **Environment variables**: Ensure React env vars are prefixed with `REACT_APP_`
+- **Monorepo issues**: Root `vercel.json` must specify `frontend/package.json` as build source
+
+#### Pros
+- Free tier available
+- Fast deployment (2-3 minutes)
+- Auto-scaling for React apps
+- Global CDN included
+- Automatic HTTPS
+
+#### Cons
+- Frontend-only deployment
+- Backend requires separate hosting
+- Limited serverless function support for complex backend logic
 
 ### Full Infrastructure Deployment (Production)
 
