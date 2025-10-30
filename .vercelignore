@@ -11,4 +11,4 @@ IaC/
 Legal URT/
 
 # Only build the frontend
-!frontend/
+!frontend/# Vercel deployment fix - Thu, Oct 30, 2025  6:48:02 AM
