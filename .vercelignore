@@ -1,21 +1,10 @@
-# Allow essential files
-!package.json
-!package-lock.json
+# Allow essential files at root
 !vercel.json
 !.vercelignore
 
-# Allow frontend directory
-!frontend/
+# Allow entire frontend directory
+!frontend/**
 
-# Ignore everything else
-src/
-node_modules/
-scripts/
-logs/
-docs/
-k8s/
-IaC/
-Legal URT/
-.github/
-*.md
-.env*
+# Ignore everything else at root
+*
+!frontend/
