@@ -35,7 +35,8 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
     expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
-    expect(screen.getByText('Please try refreshing the page.')).toBeInTheDocument();
+    // Match substring to be resilient to small copy changes in the message
+    expect(screen.getByText(/Please try refreshing the page/)).toBeInTheDocument();
   });
 
   test('refresh button reloads the page', () => {
