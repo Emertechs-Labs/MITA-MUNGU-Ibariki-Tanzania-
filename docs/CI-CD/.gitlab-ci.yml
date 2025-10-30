@@ -1,0 +1,281 @@
+stages:
+  - validate
+  - test
+  - build
+  - security
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  REGISTRY_IMAGE: registry.platform.tanzania.gov.tz/tanzania-platform
+  KUBECONFIG: /etc/deploy/config
+
+validate:terraform:
+  stage: validate
+  image: hashicorp/terraform:latest
+  before_script:
+    - cd docs/IaC
+    - terraform init
+  script:
+    - terraform validate
+    - terraform fmt -check
+  only:
+    - merge_requests
+    - main
+    - develop
+
+validate:kubernetes:
+  stage: validate
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl kustomize docs/k8s/ | kubeval --strict
+  only:
+    - merge_requests
+    - main
+    - develop
+
+test:unit:
+  stage: test
+  image: node:18-alpine
+  before_script:
+    - npm ci
+  script:
+    - npm run test:unit
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+test:integration:
+  stage: test
+  image: node:18-alpine
+  services:
+    - postgres:15-alpine
+    - redis:7-alpine
+  variables:
+    POSTGRES_DB: test_platform
+    POSTGRES_USER: testuser
+    POSTGRES_PASSWORD: testpass
+    REDIS_URL: redis://redis:6379
+  before_script:
+    - npm ci
+    - npx prisma migrate deploy
+  script:
+    - npm run test:integration
+  artifacts:
+    reports:
+      junit: test-results/junit-integration.xml
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+test:e2e:
+  stage: test
+  image: cypress/browsers:node18.12.0-chrome107
+  script:
+    - npm ci
+    - npm run build
+    - npm run test:e2e:ci
+  artifacts:
+    reports:
+      junit: cypress/results/junit.xml
+    paths:
+      - cypress/videos/
+      - cypress/screenshots/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+security:scan:
+  stage: security
+  image: zricethezav/gitleaks:latest
+  script:
+    - gitleaks detect --verbose --redact --config .gitleaks.toml
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+security:dependency:
+  stage: security
+  image: node:18-alpine
+  before_script:
+    - npm ci
+  script:
+    - npm audit --audit-level moderate
+    - npm run audit:licenses
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+security:container:
+  stage: security
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker build -t test-image .
+    - docker run --rm test-image trivy filesystem --no-progress --exit-code 1 --severity HIGH,CRITICAL /
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+build:docker:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build --target production -t $REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker build --target production -t $REGISTRY_IMAGE:latest .
+    - docker push $REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker push $REGISTRY_IMAGE:latest
+  only:
+    - main
+    - develop
+
+build:frontend:
+  stage: build
+  image: node:18-alpine
+  before_script:
+    - npm ci
+  script:
+    - npm run build:frontend
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+
+deploy:staging:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  environment:
+    name: staging
+    url: https://staging.platform.tanzania.gov.tz
+  before_script:
+    - kubectl config use-context staging-cluster
+  script:
+    - sed -i "s|__IMAGE_TAG__|$CI_COMMIT_SHA|g" docs/k8s/core-deployment.yaml
+    - kubectl apply -f docs/k8s/core-deployment.yaml
+    - kubectl apply -f docs/k8s/monitoring.yaml
+    - kubectl rollout status deployment/api-gateway -n tanzania-platform --timeout=600s
+    - kubectl rollout status deployment/voting-service -n tanzania-platform --timeout=600s
+    - kubectl rollout status deployment/identity-service -n tanzania-platform --timeout=600s
+    - kubectl rollout status deployment/social-service -n tanzania-platform --timeout=600s
+  only:
+    - develop
+
+deploy:production:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  environment:
+    name: production
+    url: https://api.platform.tanzania.gov.tz
+  before_script:
+    - kubectl config use-context production-cluster
+  script:
+    - sed -i "s|__IMAGE_TAG__|$CI_COMMIT_SHA|g" docs/k8s/core-deployment.yaml
+    - kubectl apply -f docs/k8s/core-deployment.yaml
+    - kubectl apply -f docs/k8s/monitoring.yaml
+    - kubectl rollout status deployment/api-gateway -n tanzania-platform --timeout=900s
+    - kubectl rollout status deployment/voting-service -n tanzania-platform --timeout=900s
+    - kubectl rollout status deployment/identity-service -n tanzania-platform --timeout=900s
+    - kubectl rollout status deployment/social-service -n tanzania-platform --timeout=900s
+    - kubectl rollout status deployment/ai-moderation-service -n tanzania-platform --timeout=900s
+    - kubectl rollout status deployment/knowledge-service -n tanzania-platform --timeout=900s
+  when: manual
+  only:
+    - main
+
+rollback:production:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  environment:
+    name: production
+    url: https://api.platform.tanzania.gov.tz
+  before_script:
+    - kubectl config use-context production-cluster
+  script:
+    - kubectl rollout undo deployment/api-gateway -n tanzania-platform
+    - kubectl rollout undo deployment/voting-service -n tanzania-platform
+    - kubectl rollout undo deployment/identity-service -n tanzania-platform
+    - kubectl rollout undo deployment/social-service -n tanzania-platform
+    - kubectl rollout undo deployment/ai-moderation-service -n tanzania-platform
+    - kubectl rollout undo deployment/knowledge-service -n tanzania-platform
+    - kubectl rollout status deployment/api-gateway -n tanzania-platform --timeout=600s
+  when: manual
+  only:
+    - main
+
+performance:test:
+  stage: test
+  image: node:18-alpine
+  services:
+    - postgres:15-alpine
+    - redis:7-alpine
+  variables:
+    POSTGRES_DB: perf_platform
+    POSTGRES_USER: perfuser
+    POSTGRES_PASSWORD: perfpass
+    REDIS_URL: redis://redis:6379
+  before_script:
+    - npm ci
+    - npx prisma migrate deploy
+  script:
+    - npm run test:performance
+  artifacts:
+    paths:
+      - performance-results/
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+  when: manual
+
+load:test:
+  stage: test
+  image: locustio/locust:latest
+  script:
+    - locust --headless --users 1000 --spawn-rate 10 --run-time 5m --host https://staging.platform.tanzania.gov.tz -f tests/load/locustfile.py
+  artifacts:
+    reports:
+      load_performance: load-test-results/
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+    - merge_requests
+  when: manual
+
+cleanup:artifacts:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Cleaning up old artifacts and cache"
+    - rm -rf node_modules
+    - rm -rf .npm
+  only:
+    - schedules
+  when: manual
