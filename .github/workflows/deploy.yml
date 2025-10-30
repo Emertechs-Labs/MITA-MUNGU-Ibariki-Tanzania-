@@ -21,7 +21,7 @@ jobs:
       - name: Install frontend dependencies
         run: cd frontend && npm ci
 
-      - name: Debug list repo and frontend public contents
+      - name: "Debug: list repo and frontend/public contents"
         run: |
           echo "=== Root contents ==="
           ls -la
