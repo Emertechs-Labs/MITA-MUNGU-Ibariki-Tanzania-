@@ -1,10 +1,7 @@
-# Allow essential files at root
-!vercel.json
-!.vercelignore
-
-# Allow entire frontend directory
-!frontend/**
-
-# Ignore everything else at root
+# Ignore everything by default
 *
-!frontend/
+
+# Except these files/folders required for Vercel
+!.vercelignore
+!vercel.json
+!frontend/**
