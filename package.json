@@ -14,7 +14,7 @@
     "deploy:k8s": "kubectl apply -f k8s/",
     "deploy:infrastructure": "terraform apply -auto-approve",
     "setup:hedera": "node scripts/setup-hedera.js",
-    "ingest:legal": "node scripts/ingest-legal-docs.js",
+    "ingest:legal": "node scripts/ingest-legal-docs.js"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.40.0",
@@ -62,8 +62,8 @@
     "eslint": "^8.56.0",
     "prettier": "^3.1.1",
     "pdf-parse": "^1.1.1",
-    "openai": "^4.20.1",
-    "@pinecone-database/pinecone": "^1.1.0"
+    "cohere-ai": "^7.10.0",
+    "chromadb": "^1.8.1"
   },
   "engines": {
     "node": ">=18.0.0"

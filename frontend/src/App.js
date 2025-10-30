@@ -13,7 +13,7 @@ import {
 import './App.css';
 
 const { Header, Content, Footer, Sider } = Layout;
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 function IntroAnimation({ onComplete }) {
   const [currentText, setCurrentText] = React.useState("Mungu Ibariki Tanzania");

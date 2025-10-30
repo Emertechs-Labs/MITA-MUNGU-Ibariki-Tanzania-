@@ -18,7 +18,7 @@ RAG ingestion guidelines (high level)
 1. Fetch authoritative file (prefer canonical government URL). If fetching from remote, record fetch metadata and verify checksum.
 2. Convert the PDF to structured text with page/section markers. Preserve section headings and article numbers.
 3. Chunk text into semantically-aware passages (e.g., by article/section or ~600 token chunks). Add metadata: {source, page, section, start_offset, end_offset}
-4. Embed each chunk and store in the vector DB (Pinecone/pgvector/Weaviate) with the metadata above.
+4. Embed each chunk using Cohere's free API and store in Chroma vector DB with the metadata above.
 5. When RAG responds, include a citation header with:
    - section/article number
    - link to canonical source (OAG URL)
@@ -26,9 +26,9 @@ RAG ingestion guidelines (high level)
 
 ### Running the Ingestion Script
 To ingest the Constitution into the RAG system:
-1. Set env vars: `OPENAI_API_KEY` and `PINECONE_API_KEY`.
+1. Set env var: `COHERE_API_KEY` (get free API key from Cohere).
 2. Run: `npm run ingest:legal`
-3. Verify in Pinecone dashboard that vectors are stored with metadata.
+3. The script uses local Chroma DB for storage, no external API needed for vector DB.
 
 Legal QA & Citizen Interactions
 - Citizens can query the platform's RAG assistant to ask "What rights does a citizen have regarding search and seizure?" and get an answer with exact article citations and links to the authoritative text.
