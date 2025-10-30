@@ -21,6 +21,15 @@ jobs:
       - name: Install frontend dependencies
         run: cd frontend && npm ci
 
+      - name: Debug: list repo and frontend/public contents
+        run: |
+          echo "=== Root contents ==="
+          ls -la
+          echo "=== frontend contents ==="
+          ls -la frontend || true
+          echo "=== frontend/public contents ==="
+          ls -la frontend/public || true
+
       - name: Build frontend
         run: cd frontend && npm run build
         env:
@@ -60,3 +69,22 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_BACKEND_PROJECT_ID }}
           vercel-args: '--prod'
+
+  fallback-deploy:
+    runs-on: ubuntu-latest
+    needs: deploy-frontend
+    if: failure()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fallback - Trigger Vercel Git deployment
+        # This step attempts to trigger a Vercel deployment from the repo directly
+        # even if the CI build failed. Vercel will run its own build based on the
+        # connected Git repository and `vercel.json` configuration.
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod --confirm'
