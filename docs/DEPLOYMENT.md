@@ -4,9 +4,31 @@
 
 The Tanzania Transparent Platform employs Infrastructure as Code (IaC) using Terraform for cloud provisioning and Kubernetes for container orchestration, enabling reliable, scalable, and secure deployment across Tanzania's 26 regions.
 
-## Infrastructure Architecture
+## Quick Deployment Options
 
-### Regional Distribution
+### Vercel Deployment (Frontend - Recommended for Prototyping/Demos)
+For rapid prototyping and live demos, deploy the frontend to Vercel:
+
+1. **Prerequisites**:
+   - GitHub repository connected to Vercel account.
+   - `frontend/vercel.json` configured for API routing.
+
+2. **Steps**:
+   - Import repo on [vercel.com](https://vercel.com).
+   - Select `preview` branch, root directory `frontend/`.
+   - Add env vars: `REACT_APP_API_URL=https://your-backend-url.com`.
+   - Deploy – live in 2-3 minutes.
+
+3. **Backend Deployment**:
+   - Deploy `src/server/` separately to Heroku/Railway.
+   - Update `vercel.json` with actual backend URL.
+
+4. **Pros**: Free, fast, auto-scaling for React apps.
+5. **Cons**: Not for full-stack; backend separate.
+
+### Full Infrastructure Deployment (Production)
+
+#### Regional Distribution
 
 **Primary Regions**:
 - Dar es Salaam (Main data center)

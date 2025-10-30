@@ -24,6 +24,12 @@ RAG ingestion guidelines (high level)
    - link to canonical source (OAG URL)
    - local copy path and page numbers
 
+### Running the Ingestion Script
+To ingest the Constitution into the RAG system:
+1. Set env vars: `OPENAI_API_KEY` and `PINECONE_API_KEY`.
+2. Run: `npm run ingest:legal`
+3. Verify in Pinecone dashboard that vectors are stored with metadata.
+
 Legal QA & Citizen Interactions
 - Citizens can query the platform's RAG assistant to ask "What rights does a citizen have regarding search and seizure?" and get an answer with exact article citations and links to the authoritative text.
 - The DAO governs what actions are taken when a user files a complaint against a public official. Complaint flows are implemented as proposals and tracked on-chain until resolution.
