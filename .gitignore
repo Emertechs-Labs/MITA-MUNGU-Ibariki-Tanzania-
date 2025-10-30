@@ -133,3 +133,4 @@ dist/
 
 # Logs from services
 logs/
+.vercel

@@ -22,7 +22,7 @@ For rapid prototyping and live demos, deploy the frontend to Vercel:
   "version": 2,
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/build",
-  "installCommand": "cd frontend && npm ci",
+  "installCommand": "npm install",
   "framework": "create-react-app",
   "routes": [
     {
@@ -52,20 +52,13 @@ For rapid prototyping and live demos, deploy the frontend to Vercel:
 
 **Root `.vercelignore`**:
 ```gitignore
-# Ignore root-level build files and backend code
-src/
-node_modules/
-package-lock.json
-webpack.config.js
-scripts/
-logs/
-docs/
-k8s/
-IaC/
-Legal URT/
-
-# Only build the frontend
+# Ignore everything except frontend directory and essential files
+*
 !frontend/
+!package.json
+!package-lock.json
+!vercel.json
+!.vercelignore
 ```
 
 #### Deployment Steps
@@ -82,6 +75,8 @@ Legal URT/
    ```
 
 3. **Deploy**: Automatic deployment on push to production branch
+
+**Important**: If deployment protection is enabled in Vercel dashboard, disable it for public access to the application.
 
 #### Backend Deployment
 - Deploy backend (`src/server/`) separately to Vercel or Heroku
